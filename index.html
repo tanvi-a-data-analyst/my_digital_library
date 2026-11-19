@@ -131,6 +131,7 @@ section { padding: 64px 0; }
 .cap .meta .st-reading { background: #ffe9a8; border-color: #ffe9a8; }
 .cap .meta .st-tbr { background: #e5ddf6; border-color: #e5ddf6; }
 .cap .meta .st-paused { background: #f8d9d2; border-color: #f8d9d2; }
+.cap .meta .yr { background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 700; letter-spacing: .04em; }
 
 /* ---------- Currently reading: a real hand gripping the books ---------- */
 .reading { background: linear-gradient(180deg, #f6f5f2, #e9e7e2); overflow: hidden; }
@@ -170,6 +171,30 @@ section { padding: 64px 0; }
 .lie:hover .cap, .lie:focus-visible .cap, .lie.open .cap { opacity: 1; transform: translateY(50%); }
 .surface { width: min(560px, 90%); height: 14px; background: #cfcdc6; border-radius: 50%; filter: blur(6px); margin-top: -6px; }
 
+
+
+/* Books finished per year: one series, so no legend; bars filter the shelf */
+.years { margin: -8px 0 34px; }
+.yr-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 10px; }
+.yr-head h3 { font-family: var(--font-head); font-weight: 400; font-size: 1.5rem; text-transform: uppercase; margin: 0; color: var(--navy); }
+.yr-head p { margin: 0; font-size: .86rem; color: #55534e; }
+.yr-head b { color: var(--ink); }
+.yr-clear { font: inherit; font-size: .78rem; font-weight: 700; background: none; border: 1.5px solid var(--navy); color: var(--navy); padding: 2px 8px; cursor: pointer; }
+.yr-empty { font-family: var(--font-italic); font-style: italic; font-size: 1.15rem; margin: 0; color: #55534e; }
+.bars { display: grid; grid-template-columns: repeat(var(--n), minmax(28px, 64px)); gap: 10px; align-items: end; height: 190px; padding-top: 22px; border-bottom: 1.5px solid #c9c5bc; margin-bottom: 30px; }
+.bar { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
+.bar .col { display: block; background: var(--navy); border-radius: 4px 4px 0 0; transition: background .2s; }
+.bar .n { font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; margin-bottom: 4px; color: var(--ink); }
+.bar .y { position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px; font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-align: center; color: #55534e; font-variant-numeric: tabular-nums; }
+.bar:hover .col, .bar:focus-visible .col { background: #2f4a7a; }
+.bar.sel .col { background: var(--purple); }
+.bar.zero { cursor: default; }
+.bar:focus-visible { outline: 3px solid var(--purple); outline-offset: 3px; }
+.bar .tip { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 240px; background: #fff; border-top: 4px solid var(--purple); box-shadow: 0 10px 24px rgba(0,0,0,.14); padding: 8px 11px; font-size: .78rem; line-height: 1.4; text-align: left; opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 20; }
+.bar .tip b { display: block; font-family: var(--font-mast); font-weight: 400; font-size: 1rem; margin-bottom: 2px; }
+.bar:hover .tip, .bar:focus-visible .tip { opacity: 1; }
+.years { position: relative; }
+.shelf { pointer-events: none; } .shelf .unit, .shelf .empty { pointer-events: auto; }
 
 /* ---------- Genre donuts beside Currently reading and TBR ---------- */
 .wrap.wide { max-width: 1440px; }
@@ -316,6 +341,7 @@ section { padding: 64px 0; }
       <h2 id="readTitle">The read pile</h2>
       <div class="tabs" id="tabs" role="group" aria-label="Filter by genre"></div>
     </div>
+    <div class="years" id="years"></div>
     <div class="shelf" id="shelf"></div>
   </div>
 </section>
@@ -335,7 +361,7 @@ const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTbOWJ_Bi
 /* Sheet columns: Title, Author, Year, Genre, Status, Progress, Note, Cover URL
    Status: Read | Currently reading | Paused | TBR    Note: shows as handwriting next to books in hand */
 const SAMPLE = [
-  ["Persuasion","Jane Austen","1817","Classic","Currently reading","","Reading now. Your note goes here.",""],
+  ["Persuasion","Jane Austen","1817","Classic","Currently reading","","",""],
   ["The Complete Short Fiction","Oscar Wilde","1887–1891","Classic","Currently reading","","Dipping in, a story at a time.",""],
   ["Odyssey","Stephen Fry","2024","Mythology","Paused","25","A quarter in. Picking it back up soon.",""],
   ["Good Omens","Terry Pratchett & Neil Gaiman","1990","Fantasy","TBR","","",""],
@@ -400,7 +426,17 @@ const sortGenres = list => list.sort((a, b) => {
   const r = x => TAIL.includes(x) ? 1000 + TAIL.indexOf(x) : ORDER.includes(x) ? ORDER.indexOf(x) : 500;
   return r(a) - r(b) || a.localeCompare(b);
 });
-const toBook = r => ({ title: r[0], author: r[1], year: r[2], genre: genreOf(r[3]), status: (r[4] || "TBR").trim(), progress: r[5], note: r[6], cover: r[7] });
+const COLS = { title: ["title"], author: ["author"], year: ["published year", "year published", "year", "year written", "published"], genre: ["genre"], status: ["status"],
+  progress: ["progress"], note: ["note", "notes"], cover: ["cover url", "cover"], readYear: ["year read", "read in", "year finished"] };
+let COLMAP = { title: 0, author: 1, year: 2, genre: 3, status: 4, progress: 5, note: 6, cover: 7, readYear: 8 };
+function mapHeader(head) {
+  const h = head.map(x => x.trim().toLowerCase()), m = {};
+  for (const [k, names] of Object.entries(COLS)) { const i = h.findIndex(x => names.includes(x)); m[k] = i < 0 ? COLMAP[k] : i; }
+  COLMAP = m;
+}
+const cell = (r, k) => (r[COLMAP[k]] ?? "").trim();
+const toBook = r => ({ title: cell(r, "title"), author: cell(r, "author"), year: cell(r, "year"), genre: genreOf(cell(r, "genre")), status: cell(r, "status") || "TBR",
+  progress: cell(r, "progress"), note: cell(r, "note"), cover: cell(r, "cover"), readYear: (cell(r, "readYear").match(/\d{4}/) || [""])[0] });
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
 const hash = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 const kind = s => /currently|reading/i.test(s) ? "reading" : /paused|hold/i.test(s) ? "paused" : /^read$|finished|done/i.test(s) ? "read" : "tbr";
@@ -414,7 +450,7 @@ function look(b) {
 function caption(b, i) {
   const k = kind(b.status), pct = parseInt(b.progress, 10);
   return `<span class="cap" role="tooltip"><span class="no">NO. ${String(i).padStart(2, "0")}</span><h3>${esc(b.title)}</h3><p class="by">${esc(b.author)}</p>
-    <span class="meta"><span>${esc(b.year)}</span><span>${esc(b.genre)}</span><span class="st-${k}">${LABEL[k]}${isNaN(pct) ? "" : " · " + pct + "%"}</span></span></span>`;
+    <span class="meta"><span>${esc(b.year)}</span><span>${esc(b.genre)}</span><span class="st-${k}">${LABEL[k]}${isNaN(pct) ? "" : " · " + pct + "%"}</span>${b.readYear && k === "read" ? `<span class="yr">Read in ${esc(b.readYear)}</span>` : ""}</span></span>`;
 }
 function coverFace(b, L) {
   return `<span class="ph"><span class="ft">${esc(b.title)}</span><span><span class="rule" style="display:block"></span><span class="fa">${esc(b.author)}</span></span></span>`;
@@ -427,7 +463,7 @@ function spineBook(b, i, opts = {}) {
       <div class="front">${coverFace(b, L)}</div></div>${caption(b, i)}</div>`;
 }
 
-let BOOKS = [], activeGenre = "All", LIVE = false;
+let BOOKS = [], activeGenre = "All", activeYear = null, LIVE = false;
 
 function renderReading() {
   const held = BOOKS.filter(b => ["reading", "paused"].includes(kind(b.status))).slice(0, 3);
@@ -442,7 +478,7 @@ function renderReading() {
   }).join("");
   document.getElementById("notes").innerHTML = held.map((b, i) => {
     const tag = kind(b.status) === "paused" ? "Paused!" : "Reading!", p = spots[i];
-    return `<div class="note" style="left:calc(50% + ${p.x - 450 - 95}px);top:${p.y}px;color:${inks[i]}"><span class="tag">${tag}</span><div>${esc(b.note || b.title)}</div></div>`;
+    return `<div class="note" style="left:calc(50% + ${p.x - 450 - 95}px);top:${p.y}px;color:${inks[i]}"><span class="tag">${tag}</span>${b.note ? `<div>${esc(b.note)}</div>` : ""}</div>`;
   }).join("");
 }
 
@@ -457,17 +493,44 @@ function renderTBR() {
   }).join("") : `<p class="empty">The stack is empty. Time to buy books.</p>`;
 }
 
+function renderYears(all) {
+  const el = document.getElementById("years");
+  const dated = all.filter(b => b.readYear), missing = all.length - dated.length;
+  if (!dated.length) {
+    el.innerHTML = `<div class="yr-head"><h3>Finished, by year</h3></div><p class="yr-empty">Add the year you read each book in the Sheet's <b>Year read</b> column, and a chart of books finished per year appears here.</p>`;
+    return;
+  }
+  const counts = {}; dated.forEach(b => (counts[b.readYear] ||= []).push(b));
+  const ys = dated.map(b => +b.readYear), lo = Math.min(...ys), hi = Math.max(...ys);
+  const years = []; for (let y = lo; y <= hi; y++) years.push(String(y));   /* every year in range, empty ones too */
+  const max = Math.max(...years.map(y => (counts[y] || []).length));
+  const best = years.reduce((a, y) => (counts[y] || []).length > (counts[a] || []).length ? y : a, years[0]);
+  el.innerHTML = `<div class="yr-head"><h3>Finished, by year</h3>
+      <p>Most in a year: <b>${counts[best].length} in ${best}</b>${missing ? ` · ${missing} without a year yet` : ""}${activeYear ? ` · <button class="yr-clear" type="button">Show all years ×</button>` : ""}</p></div>
+    <div class="bars" role="list" style="--n:${years.length}">${years.map(y => {
+      const list = counts[y] || [], h = list.length / max * 100;
+      const names = list.slice(0, 6).map(b => esc(b.title)).join("<br>") + (list.length > 6 ? `<br>+${list.length - 6} more` : "");
+      return `<button class="bar${activeYear === y ? " sel" : ""}${!list.length ? " zero" : ""}" type="button" role="listitem" data-y="${y}" ${list.length ? "" : "disabled"}
+        aria-label="${y}: ${list.length} book${list.length === 1 ? "" : "s"}" aria-pressed="${activeYear === y}">
+        <span class="n">${list.length || ""}</span><span class="col" style="height:${Math.max(h, list.length ? 6 : 0)}%"></span><span class="y">${y}</span>
+        ${list.length ? `<span class="tip"><b>${y} · ${list.length} book${list.length === 1 ? "" : "s"}</b>${names}</span>` : ""}</button>`;
+    }).join("")}</div>`;
+}
+
 function renderRead() {
   const all = BOOKS.filter(b => kind(b.status) === "read");
   const rank = sortGenres([...new Set(all.map(b => b.genre))]);
-  const shown = all.filter(b => activeGenre === "All" || b.genre === activeGenre).sort((a, b) => rank.indexOf(a.genre) - rank.indexOf(b.genre));
+  const shown = all.filter(b => (activeGenre === "All" || b.genre === activeGenre) && (!activeYear || b.readYear === activeYear))
+    .sort((a, b) => rank.indexOf(a.genre) - rank.indexOf(b.genre));
   document.getElementById("readTitle").innerHTML = `The read pile <small>${all.length} finished</small>`;
   const genres = ["All", ...sortGenres([...new Set(all.map(b => b.genre))])];
   document.getElementById("tabs").innerHTML = genres.map(g => `<button class="tab" id="tab-${g.replace(/\W+/g, "-")}" data-g="${esc(g)}" aria-pressed="${g === activeGenre}">${esc(g)}</button>`).join("");
+  renderYears(all);
   /* group into shelf units of ~10 so each run of spines sits on its own ledge */
   const units = []; for (let i = 0; i < shown.length; i += 10) units.push(shown.slice(i, i + 10));
+  const what = [activeGenre !== "All" ? activeGenre : "", activeYear ? `from ${activeYear}` : ""].filter(Boolean).join(" ");
   document.getElementById("shelf").innerHTML = shown.length ? units.map((u, ui) =>
-    `<div class="unit">${u.map((b, j) => spineBook(b, ui * 10 + j + 1)).join("")}</div>`).join("") : `<p class="empty">No ${esc(activeGenre)} here yet.</p>`;
+    `<div class="unit">${u.map((b, j) => spineBook(b, ui * 10 + j + 1)).join("")}</div>`).join("") : `<p class="empty">Nothing ${esc(what)} here yet.</p>`;
 }
 
 function renderMast() {
@@ -601,6 +664,8 @@ document.addEventListener("pointerover", e => {
 document.addEventListener("click", e => {
   const t = e.target.closest(".tab");
   if (t) { activeGenre = t.dataset.g; renderRead(); fitSpines(); loadCovers(); return; }
+  const yb = e.target.closest(".bar, .yr-clear");
+  if (yb) { activeYear = yb.classList.contains("yr-clear") || activeYear === yb.dataset.y ? null : yb.dataset.y; renderRead(); fitSpines(); loadCovers(); return; }
   const b = e.target.closest(".bk, .lie");
   document.querySelectorAll(".open").forEach(x => x !== b && x.classList.remove("open"));
   if (b) b.classList.toggle("open");
@@ -611,7 +676,7 @@ document.addEventListener("keydown", e => {
 
 (async function init() {
   if (SHEET_CSV_URL) {
-    try { BOOKS = parseCSV(await (await fetch(SHEET_CSV_URL)).text()).slice(1).map(toBook).filter(b => b.title); LIVE = BOOKS.length > 0; if (!LIVE) BOOKS = SAMPLE.map(toBook); }
+    try { const rows = parseCSV(await (await fetch(SHEET_CSV_URL)).text()); mapHeader(rows[0] || []); BOOKS = rows.slice(1).map(toBook).filter(b => b.title); LIVE = BOOKS.length > 0; if (!LIVE) BOOKS = SAMPLE.map(toBook); }
     catch (e) { BOOKS = SAMPLE.map(toBook); }
   } else BOOKS = SAMPLE.map(toBook);
   render();
