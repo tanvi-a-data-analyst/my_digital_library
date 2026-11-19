@@ -170,6 +170,39 @@ section { padding: 64px 0; }
 .lie:hover .cap, .lie:focus-visible .cap, .lie.open .cap { opacity: 1; transform: translateY(50%); }
 .surface { width: min(560px, 90%); height: 14px; background: #cfcdc6; border-radius: 50%; filter: blur(6px); margin-top: -6px; }
 
+
+/* ---------- Genre donuts beside Currently reading and TBR ---------- */
+.wrap.wide { max-width: 1440px; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; align-items: center; }
+.split .hand-stage, .split .tbr-stage { margin: 0; width: 100%; }
+.pie { --ring: #e4e1da; background: rgba(255,255,255,.55); border: 1px solid rgba(19,34,59,.08); border-radius: 28px; padding: 22px 22px 18px; box-shadow: 0 18px 40px -24px rgba(19,34,59,.35); position: relative; }
+.pie h3 { font-family: var(--font-head); font-weight: 400; font-size: 1.5rem; text-transform: uppercase; letter-spacing: .02em; margin: 0; color: var(--navy); }
+.pie .sub { font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #6b6a66; margin: 2px 0 6px; }
+.pie .ring { position: relative; width: 210px; height: 210px; margin: 6px auto 4px; }
+.pie svg { width: 100%; height: 100%; overflow: visible; }
+.pie .seg { fill: none; stroke-width: 24; stroke-linecap: round; transition: stroke-dasharray 1.1s cubic-bezier(.3,.8,.3,1), stroke-width .2s, opacity .2s; cursor: pointer; }
+.pie .hit { fill: none; stroke: transparent; stroke-width: 44; cursor: pointer; }
+.pie.dim .seg { opacity: .35; } .pie.dim .seg.on { opacity: 1; stroke-width: 30; }
+.pie .mid { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+.pie .mid b { font-family: var(--font-mast); font-weight: 400; font-size: 3rem; line-height: .9; color: var(--navy); font-variant-numeric: tabular-nums; }
+.pie .mid span { font-size: .7rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #6b6a66; margin-top: 4px; max-width: 110px; }
+.pie .doodle { position: absolute; right: 14px; top: 64px; font-family: var(--font-hand); font-size: 1.35rem; color: var(--purple); transform: rotate(8deg); line-height: 1; text-align: center; }
+.pie ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 2px; }
+.pie li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: .86rem; padding: 5px 8px; border-radius: 10px; cursor: pointer; }
+.pie li i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); }
+.pie li em { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pie li em small { font-weight: 400; color: #6b6a66; margin-left: 6px; }
+.pie li:hover, .pie li.on { background: rgba(19,34,59,.06); }
+.pie li:focus-visible { outline: 3px solid var(--purple); outline-offset: 1px; }
+@media (max-width: 1180px) {
+  .split { grid-template-columns: 1fr; }
+  .split .hand-stage, .split .tbr-stage { margin: 0 auto; }
+  .pie { max-width: 560px; width: 100%; margin: 24px auto 0; display: grid; grid-template-columns: 210px minmax(0, 1fr); column-gap: 24px; align-items: center; }
+  .pie h3, .pie .sub { grid-column: 1 / -1; }
+  .pie .doodle { display: none; }
+}
+@media (max-width: 560px) { .pie { grid-template-columns: 1fr; } }
+
 /* ---------- Read pile ---------- */
 .read-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 18px; border-bottom: 3px solid var(--navy); padding-bottom: 10px; margin-bottom: 34px; }
 .read-head h2 { font-family: var(--font-head); font-weight: 400; font-size: clamp(2.6rem, 6vw, 4.4rem); line-height: .9; margin: 0; text-transform: uppercase; color: var(--navy); }
@@ -202,7 +235,7 @@ section { padding: 64px 0; }
   .lie { max-width: 88vw; }
   .lie .peek { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .bk, .bk .b3, .lie, .cap, .peek, .tome, .cover, .welcome, .enter, .leaf { transition: none !important; } .arrive .mast .wrap { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .bk, .bk .b3, .lie, .cap, .peek, .tome, .cover, .welcome, .enter, .leaf, .seg { transition: none !important; } .arrive .mast .wrap { animation: none; } }
 </style>
 </head>
 <body>
@@ -238,8 +271,9 @@ section { padding: 64px 0; }
 </header>
 
 <section class="reading" id="reading">
-  <div class="wrap">
+  <div class="wrap wide">
     <p class="kicker">01 · Currently reading</p>
+    <div class="split">
     <div class="hand-stage" id="handStage">
       <svg class="arcs" viewBox="0 0 900 640" aria-hidden="true">
         <defs><path id="arcL" d="M20 540 C 0 350, 110 160, 380 90"/></defs>
@@ -249,12 +283,15 @@ section { padding: 64px 0; }
       <div class="held" id="held"></div>
       <div id="notes"></div>
     </div>
+    <aside class="pie" id="pieReading" aria-label="Currently reading by genre"></aside>
+    </div>
   </div>
 </section>
 
 <section class="tbr" id="tbr">
-  <div class="wrap">
+  <div class="wrap wide">
     <p class="kicker">02 · The TBR stack</p>
+    <div class="split">
     <div class="tbr-stage">
       <p class="big" id="tbrBig">4 books</p>
       <div class="stack-wrap">
@@ -267,6 +304,8 @@ section { padding: 64px 0; }
         <p class="side-m">i want to read next</p>
       </div>
       <div class="surface"></div>
+    </div>
+    <aside class="pie" id="pieTbr" aria-label="TBR by genre"></aside>
     </div>
   </div>
 </section>
@@ -470,6 +509,60 @@ document.querySelector(".enter").addEventListener("click", e => {
 });
 playIntro();
 
+
+/* Genre donuts. Colour follows the genre (fixed map), never its rank; extra genres fold into "Other". */
+const GENRE_COLORS = { "Classic": "#e2553d", "Fantasy": "#1f9cb0", "Mystery & Thriller": "#d4a10f", "Literary fiction": "#8b74c9",
+  "Science fiction": "#6fa44a", "Mythology": "#3b5fae", "Non-fiction": "#e07f9c", "Plays and Poems": "#b8641c" };
+const OTHER = "#9b978d";
+function donut(id, books, title, noun) {
+  const el = document.getElementById(id); if (!el) return;
+  if (!books.length) { el.innerHTML = `<h3>${title}</h3><p class="sub">Nothing here yet</p>`; return; }
+  const counts = {}; books.forEach(b => { const g = GENRE_COLORS[b.genre] ? b.genre : "Other"; counts[g] = (counts[g] || 0) + 1; });
+  let rows = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const oth = rows.filter(r => r[0] === "Other"); rows = rows.filter(r => r[0] !== "Other").concat(oth);
+  const n = books.length, R = 80, C = 2 * Math.PI * R, GAP = rows.length > 1 ? 30 : 0; /* gap leaves room for the round caps */
+  let acc = 0;
+  const segs = rows.map(([g, c], i) => {
+    const len = c / n * C, draw = Math.max(.01, len - GAP), off = acc; acc += len;
+    const col = GENRE_COLORS[g] || OTHER, pct = Math.round(c / n * 100);
+    return { g, c, pct, col, draw, off, i };
+  });
+  const top = rows[0][0];
+  el.innerHTML = `<h3>${title}</h3><p class="sub">By genre · ${n} ${noun}</p>
+    <div class="ring"><svg viewBox="0 0 210 210" role="img" aria-label="${esc(rows.map(([g, c]) => `${g} ${Math.round(c / n * 100)}%`).join(", "))}">
+      <circle cx="105" cy="105" r="${R}" fill="none" stroke="var(--ring)" stroke-width="24"/>
+      <g transform="rotate(-90 105 105)">${segs.map(s => `
+        <circle class="seg" data-i="${s.i}" cx="105" cy="105" r="${R}" stroke="${s.col}" stroke-dasharray="0 ${C}" stroke-dashoffset="${-(s.off + GAP / 2)}" data-d="${s.draw} ${C - s.draw}"/>
+        <circle class="hit" data-i="${s.i}" cx="105" cy="105" r="${R}" stroke-dasharray="${Math.max(1, s.draw + 12)} ${C}" stroke-dashoffset="${-(s.off + GAP / 2 - 6)}"/>`).join("")}
+      </g></svg>
+      <div class="mid"><b>${n}</b><span>${noun}</span></div></div>
+    ${rows.length > 1 ? `<p class="doodle">mostly<br>${esc(top.toLowerCase())}!</p>` : ""}
+    <ul>${segs.map(s => `<li tabindex="0" data-i="${s.i}" style="--c:${s.col}"><i></i><span>${esc(s.g)}</span><em>${s.pct}%<small>${s.c}</small></em></li>`).join("")}</ul>`;
+  const mid = el.querySelector(".mid");
+  const focus = i => {
+    el.classList.toggle("dim", i != null);
+    el.querySelectorAll(".seg, li").forEach(x => x.classList.toggle("on", x.dataset.i == i));
+    const s = segs[i];
+    mid.innerHTML = s ? `<b>${s.pct}%</b><span>${esc(s.g)}</span>` : `<b>${n}</b><span>${noun}</span>`;
+  };
+  el.querySelectorAll(".hit, li").forEach(x => {
+    x.addEventListener("pointerenter", () => focus(+x.dataset.i));
+    x.addEventListener("pointerleave", () => focus(null));
+    x.addEventListener("focus", () => focus(+x.dataset.i));
+    x.addEventListener("blur", () => focus(null));
+  });
+  /* draw the ring in when it scrolls into view */
+  const grow = () => el.querySelectorAll(".seg").forEach((c, k) => setTimeout(() => c.setAttribute("stroke-dasharray", c.dataset.d), k * 120));
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { grow(); io.disconnect(); } }, { threshold: .3 });
+    io.observe(el);
+  } else grow();
+}
+function renderPies() {
+  donut("pieReading", BOOKS.filter(b => ["reading", "paused"].includes(kind(b.status))), "On my desk", "books");
+  donut("pieTbr", BOOKS.filter(b => kind(b.status) === "tbr"), "In the stack", "books");
+}
+
 /* shrink each spine title until it fits its spine (floor 55%, then it ellipses) */
 function fitSpines() {
   document.querySelectorAll(".spine .st").forEach(t => {
@@ -477,7 +570,7 @@ function fitSpines() {
     while (t.scrollHeight > t.clientHeight + 1 && k > .5) { k -= .05; t.style.setProperty("--k", k.toFixed(2)); }
   });
 }
-function render() { renderMast(); renderReading(); renderTBR(); renderRead(); fitSpines(); document.fonts && document.fonts.ready.then(fitSpines); loadCovers(); }
+function render() { renderMast(); renderReading(); renderTBR(); renderPies(); renderRead(); fitSpines(); document.fonts && document.fonts.ready.then(fitSpines); loadCovers(); }
 
 /* Real covers: Cover URL from the Sheet, else looked up on Open Library (remembered in this browser). */
 async function loadCovers() {
